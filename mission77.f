@@ -1,0 +1,14 @@
+      PROGRAM MISSION
+      INTEGER DAY
+      DOUBLE PRECISION SPEED, DIST
+      PARAMETER (SPEED = 24000.0D0)
+      DAY = 1
+      WRITE (*, '(A)') 'MISSION DISTANCE REPORT'
+   10 IF (DAY .GT. 5) GOTO 20
+      DIST = SPEED * DBLE(DAY) * 24.0D0
+      WRITE (*, 100) DAY, DIST
+      DAY = DAY + 1
+      GOTO 10
+   20 CONTINUE
+  100 FORMAT('Day ', I1, ': ', F12.0, ' km')
+      END

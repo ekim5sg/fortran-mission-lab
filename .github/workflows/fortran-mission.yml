@@ -1,0 +1,68 @@
+name: Fortran Mission - Compile and Run
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  compile-and-run:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: .
+        shell: bash
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install GNU Fortran
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y gfortran
+          mkdir -p results
+          gfortran --version | tee results/compiler.txt
+      - name: Compile both versions
+        run: |
+          set -euo pipefail
+          gfortran -std=f2008 -Wall -Wextra -fcheck=all mission.f90 -o results/mission-modern
+          gfortran -std=legacy -Wall -Wextra -fcheck=all mission77.f -o results/mission77
+      - name: Run modern Fortran
+        run: |
+          set -euo pipefail
+          ./results/mission-modern | tee results/modern-output.txt
+      - name: Run FORTRAN 77
+        run: |
+          set -euo pipefail
+          ./results/mission77 | tee results/fortran77-output.txt
+      - name: Verify five-day distances
+        run: |
+          set -euo pipefail
+          python3 verify_outputs.py results/modern-output.txt results/fortran77-output.txt | tee results/verification.txt
+      - name: Write mission summary
+        if: always()
+        run: |
+          {
+            echo '## Fortran Mission - actual compiled output'
+            echo 'Constant speed: 24,000 km/h. Duration: five days.'
+            echo
+            for report in results/modern-output.txt results/fortran77-output.txt results/verification.txt; do
+              if [ -f "$report" ]; then
+                echo "### $(basename "$report")"
+                echo '```text'
+                cat "$report"
+                echo '```'
+              fi
+            done
+          } >> "$GITHUB_STEP_SUMMARY"
+      - name: Save executables and reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: fortran-mission-linux-results
+          path: results/
+          if-no-files-found: warn
+          retention-days: 14
