@@ -1,0 +1,3 @@
+results/
+*.mod
+__pycache__/
